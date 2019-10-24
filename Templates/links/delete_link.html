@@ -1,0 +1,23 @@
+{% load static %}
+<script>
+    function delete_link(target_el){
+        console.log(target_el)
+        $.ajax({
+            async:false,
+            url: '{% url 'delete_link' %}',
+            type: "POST",
+            data: {
+                'csrfmiddlewaretoken': '{{ csrf_token }}',
+                'link_id': target_el.attr('id'),
+                'link_delete_valid': true
+            },
+            success: function(data){
+                console.log("Delete link");
+                target_el.remove();
+            },
+            error: function(){
+                console.log("Error")
+            }
+        })
+    }
+</script>

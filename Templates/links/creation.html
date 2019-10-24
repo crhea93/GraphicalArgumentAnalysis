@@ -1,0 +1,60 @@
+    {% load static %}
+
+    <script>
+        function create_link()  {
+            console.log('new link');
+            var start_block_id = $('.Selected:first').attr("id").split("_")[1];
+            var end_block_id = $('.Selected:last').attr("id").split("_")[1];
+            if (start_block_id === end_block_id){
+                return false
+            }
+            var start_block_global_id = $('.Selected:first').attr("title");
+            var end_block_global_id = $('.Selected:last').attr("title");
+            var start_x = parseFloat($('#block_'+start_block_id).css('left'));
+            var start_y = parseFloat($('#block_'+start_block_id).css('top'));
+            var end_x = parseFloat($('#block_'+end_block_id).css('left'));
+            var end_y = parseFloat($('#block_'+end_block_id).css('top'));
+            var point_array = [start_x,start_y,end_x,end_y];
+            for (let i=0; i<point_array.length; i++){
+                if (typeof point_array[i] === 'undefined'){
+                    point_array[i] = 0;
+                }
+            }
+            //-------------DJANGO CALL-------------------//
+            $.ajax({
+                async: false,
+                type: "POST",
+                url: '{% url 'add_link' %}',
+                data: {
+                    'starting_block': start_block_id,
+                    'ending_block': end_block_id,
+                    'csrfmiddlewaretoken': '{{ csrf_token }}',
+                    'link_valid': true,
+                    'start_global_id':start_block_global_id,
+                    'end_global_id':end_block_global_id
+                },
+                //dataType: 'json',
+                success: function (data) {
+                    //Get x and y coordinates of starting and ending block
+                    console.log(data)
+                    var link = createLine(data.id,data.id,point_array,drag_width,drag_height,start_block_global_id,end_block_global_id);
+                    let end_block = $('[title='+"'"+end_block_global_id+"']");
+                    let start_block = $('[title='+"'"+start_block_global_id+"']");
+                    end_block.attr('data-links','&#39'+end_block.attr('data-links')+data.id);
+                    start_block.attr('data-links','&#39'+start_block.attr('data-links')+data.id);
+                    // Add new item with chosen attributes and make draggable
+                    console.log(link)
+                    $("#CAM_items #selectable").append(link);
+                    //unselect blocks
+                    $('.Selected').each(function(){
+                        $(this).removeClass("Selected");
+                    });
+                    //location.reload()
+                },
+                error: function(){
+                     console.log("Error")
+                }
+            });//Ajax done
+            //Now to add the new item in the CAM
+        } //end of clicking form
+    </script>

@@ -1,0 +1,160 @@
+{% load static %}
+<script>
+    //---------FUNCTION FOR PLACEMENT OF FUNCTIONS ------------//
+    function place_concept(title,x,y,num,id,links){
+        num = parseInt(num);
+        console.log(num)
+        //add shape
+        def_created_concept = existing_concept_init(title,x,y,num,id);
+        //Add concept
+        $("#CAM_items #selectable").append(def_created_concept);
+        // add links to data-links attribute
+        var block_ = $('#block_' + num);
+        block_.attr('data-links',links);
+        block_.value = title;
+        $('#success_block_'+num).append('<p>'+title+'</p>');
+        block_.draggable({
+             containment: "#CAM_items",
+            scroll: true,
+             start: function( event, ui ) {
+                 $(this).addClass('my_class');
+             },
+            drag: function(evt,ui){
+                 //-- DRAG ALONG LINES --//
+                 var factor = (1 / currentZoom) - 1;
+                 ui.position.top += Math.round((ui.position.top - ui.originalPosition.top) * factor);
+                 ui.position.left += Math.round((ui.position.left- ui.originalPosition.left) * factor);
+                 //update links
+                let link_numbers= $('#block_'+num).attr('data-links').split('&#39;');
+                for (link_ct in  link_numbers){
+                    if (link_ct%2 === 1) {
+                        link_number = link_numbers[link_ct];
+                        let link_sel = $('#'+link_number);
+                        if (block_.attr('title') === link_sel.attr('data-start_id')){
+                             update_link_start(link_sel,block_.css("left"),block_.css("top"));
+                        }
+                        else{
+                            update_link_end(link_sel,block_.css("left"),block_.css('top'))
+                        }
+                    }
+                }// end updating links
+                //-- SNAP TO GRID --//
+                var snapTolerance = $(this).draggable('option', 'snapTolerance');
+                var topRemainder = ui.position.top % 20;
+                var leftRemainder = ui.position.left % 20;
+                if (topRemainder <= snapTolerance) {
+                    ui.position.top = ui.position.top - topRemainder;
+                }
+
+                if (leftRemainder <= snapTolerance) {
+                    ui.position.left = ui.position.left - leftRemainder;
+                }
+            },
+             stop: function( event, ui ) {
+                 $(this).removeClass('my_class');
+                 drag_func(block_.attr("title"),num,block_.css("left"),block_.css("top"));
+             },
+             scroll: true
+         });
+        block_.css('position', 'absolute');
+         //concept_select(block_,num);
+         //---------CHECKBOX--------------//
+        $(document).on('mousedown','.checkbox',function () {
+            let ct = this.id.split("_")[1]
+            checkbox_changes($('#check_'+ct),$("#block_"+ct),ct)
+        });
+         //---------------SLIDER CHANGES------------------//
+        $(document).on('mouseup','.slider',function () {
+            let ct = this.id.split("_")[1]
+            slider_changes(event,ct);
+        });
+         //----------Define Modification Button---------//
+        $('#form_cam_block_button_mod_'+num).click(function (e) {
+                e.preventDefault();
+                var X = event.pageX-drag_width;
+                var Y = event.pageY-3*drag_height;
+                console.log('updating block')
+                $('#title_'+num).value = title;
+                var block_id = $(this).attr('id').slice(-1)
+                shape_ = 1;
+                if ($('#check_'+num).is(':checked')){
+                    shape_ = 5
+                }
+                else {
+                    shape_ = $('#shape_'+num).val()
+                }
+                console.log(block_id );
+                $.ajax({
+                    async: false,
+                    type: "POST",
+                    url: "{% url 'update_block' %}",
+                    data: {
+                        'title': $('#title_'+num).val(),
+                        'shape': shape_,
+                        'x_pos': X,
+                        'y_pos': Y,
+                        'num_block':block_id,//$('#block_'+block_id).attr("title"),
+                        'global_block_id':  $('#block_'+block_id).attr("title"),
+                        'csrfmiddlewaretoken': '{{ csrf_token }}',
+                        'update_valid': true,
+                    },
+                    success: function (data) {
+                        //console.log('form_id:'+block_id);
+                        $('#block_form_'+data.num).attr('hidden',true);
+                        $('#success_block_'+data.num).empty();
+                        $('#success_block_'+data.num).append('<p>'+$('#title_'+data.num).val()+'</p>');
+                        $('.Selected').each(function(){
+                            $(this).removeClass("Selected");
+                        });
+                    },
+                    error: function () {
+                        console.log("Error")
+                    }
+                })//end ajax
+            }); //end block modification button
+        //-----------Enter button to modify----------//
+        //keypress_options($("#block_" + num),num)
+        //-----------BLOCK SELECTION-----------------//
+        //concept_select(block_,num);
+    }
+
+    //----------GET INFO OFF DATABASE TO MAKE CAM-------------//
+    $(document).ready(function (e) {
+        var first_ = true;
+        $.ajax({
+            async: false,
+            type: "GET",
+            url: '',
+            data: {
+                'first': first_,
+                'csrfmiddlewaretoken': '{{ csrf_token }}',
+            },
+            success: function (data) {
+                console.log("Placing CAM");
+                //Place existing blocks for the user
+                {% for block in existing_blocks %}
+                    place_concept("{{ block.title }}","{{ block.x_pos }}","{{ block.y_pos }}","{{ block.num }}","{{ block.id }}","{{ block.links }}");
+                    concept_ct = {{ block.num }};
+                {% endfor %}
+                {% for line in existing_lines %}
+                    var link = createLine( "{{ line.id }}","{{ line.id }}",["{{ line.start_x }}","{{ line.start_y }}","{{ line.end_x }}","{{ line.end_y }}"],drag_width,drag_height, "{{ line.starting_block }}", "{{ line.ending_block }}");
+                    $("#CAM_items #selectable").append(link);
+                    let link_sel = $('#'+{{ line.id }})
+                    if ('{{ line.warrant }}' === 'True'){
+                        link_sel.addClass('Warrant')
+                        link_sel.append('<div class="rectangle Warrant border border-dark rounded">W</div>')
+                    }
+                    else{
+                        link_sel.removeClass('Warrant');
+                        link_sel.empty()
+                    }
+                {% endfor %}
+                first_ = false;
+            },
+            error: function () {
+                console.log("Error")
+            }
+        });//Ajax done
+    }); //end of window ready
+
+</script>

@@ -1,0 +1,28 @@
+{% load static %}
+<script>
+    function blk_delete(blk_elem){
+         $.ajax({
+                async: false,
+                type: "POST",
+                url: "{% url 'delete_block' %}",
+                data: {
+                    'block_id': blk_elem.title,
+                    'user_block_id': blk_elem.id.split('_')[1],
+                    'csrfmiddlewaretoken': '{{ csrf_token }}',
+                    'delete_valid': true,
+                },
+                success: function (data) {
+                    blk_elem.remove();
+                    console.log(data)
+                    var num_links = data.length
+                    var link_ = data.links[0];
+                    console.log(data.links.length,num_links);
+                    //$('#'+link_).remove();
+                    for (n_link = 0; n_link < data.links.length; n_link++) {
+                        console.log("link found");
+                        $('#'+data.links[n_link]).remove();
+                    }
+                }
+        })
+    }
+</script>

@@ -1,0 +1,131 @@
+{% load static %}
+
+<script>
+    function block_placement(event,cam_element,drag_width,drag_height,concept_ct,zoom_scale){
+        event.stopPropagation();
+         if( event.target.id !== cam_element.attr('id') ) {
+             return false; //Dont add element if child is clicked!
+         }
+        //get the current x and y of the mouse pointer
+        concept_ct += 1;
+        let X = zoom_scale*(event.pageX+drag_width);
+        let Y = zoom_scale*(event.pageY-5*drag_height);
+        let cam_item = def_concept(X, Y, concept_ct);
+        //add concept to CAM
+        $("#CAM_items #selectable").append(cam_item);
+        let block_ = $('#block_'+concept_ct);
+        block_.css('position', 'absolute');
+        block_.addClass('Open');
+        return [concept_ct,X,Y]
+    }
+
+
+
+    $(document).on('click',".close",function(){
+        var block_ = $(this).parent();
+        block_.remove();
+        blk_delete(block_[0])
+    });
+
+    //-------------SEND DATA TO DJANGO FOR SAVE----------------//
+    $(document).on('click','.concept_btn',function (e) {
+        e.preventDefault();
+        let ct = this.title;
+        console.log('submitting block');
+
+        $.ajax({
+            async: false,
+            type: "POST",
+            url: "{% url 'add_block' %}",
+            data: {
+                'title': $('#title_'+ct).val(),
+                'x_pos': X,
+                'y_pos': Y,// - drag_height,
+                'num_block': ct,
+                'csrfmiddlewaretoken': '{{ csrf_token }}',
+                'add_valid': true,
+            },
+            //dataType: 'json',
+            success: function (data) {
+
+                //ADD BLOCKS and CREATE LINK SETUP
+                $('.Selected').each(function(){
+                    $(this).removeClass('Selected');
+                })
+                $('#block_form_'+data.num).attr('hidden',true);
+                $('#success_block_'+data.num).append('<p>'+$('#title_'+data.num).val()+'</p>');
+                $("#link_blocks").load(location.href + " #link_blocks");
+                $("#link_blocks_del").load(location.href + " #link_blocks_del");
+                var block_ = $('#block_' + data.num);
+                block_.attr('Title',data.id);
+                block_.attr('data-links',data.links);
+                //--------------BLOCK DRAGGING-------------------------------//
+                block_.draggable({
+                     containment: "#CAM_items",
+                     scroll: true,
+                     start: function( event, ui ) {
+                         $(this).addClass('my_class');
+                     },
+                    drag: function(evt,ui){
+                                 var factor = (1 / currentZoom) -1;
+                                 ui.position.top += Math.round((ui.position.top - ui.originalPosition.top) * factor);
+                                 ui.position.left += Math.round((ui.position.left- ui.originalPosition.left) * factor);
+                                 $('#link_slider_choice').attr('hidden',true);
+                                let link_numbers= $('#block_'+data.num).attr('data-links').split('&#39');
+                                link_numbers = link_numbers.slice(1)
+                                for (link_ct in  link_numbers){
+                                        link_number = link_numbers[link_ct];
+                                        let link_sel = $('#'+link_number);
+                                        if (block_.attr('title') === link_sel.attr('data-start_id')){
+                                             update_link_start(link_sel,block_.css("left"),block_.css("top"));
+                                        }
+                                        else{
+                                            update_link_end(link_sel,block_.css("left"),block_.css('top'))
+                                        }
+
+                                }// end updating links
+                            },
+                     stop: function( event, ui ) {
+                         $(this).removeClass('my_class');
+                         drag_func(data.id,data.num,$('#block_' + data.num).css("left"),$('#block_' + data.num).css("top"))
+                     }
+                 })
+            },
+            error: function () {
+                console.log("FALIED TO ADD BLOCK")
+            }
+        });//Ajax done
+    }); //end of clicking form
+    //---------------------CONCEPT MODIFICATION INFORMATION AND DJANGO CALL-----------------------//
+     $(document).on('click','.modify_concept_btn',function (e) {
+        e.preventDefault();
+        var X = event.pageX;//-drag_width;
+        var Y = event.pageY;//-3*drag_height;
+        let ct = this.title
+        $.ajax({
+            async: false,
+            type: "POST",
+            url: "{% url 'update_block' %}",
+            data: {
+                'title': $('#title_'+ct).val(),
+                'x_pos': X,
+                'y_pos': Y - drag_height,
+                'num_block': ct,
+                'global_block_id': $('#block_'+ct).attr("title"),
+                'csrfmiddlewaretoken': '{{ csrf_token }}',
+                'update_valid': true,
+            },
+            success: function (data) {
+                $('#block_form_'+data.num).attr('hidden',true);
+                $('#success_block_'+data.num).empty()
+                $('#success_block_'+data.num).append('<p>'+$('#title_'+data.num).val()+'</p>');
+                $('.Selected').each(function(){
+                     $(this).removeClass("Selected");
+                 });
+            },
+            error: function () {
+                console.log("Error")
+            }
+        })//end ajax
+    }); //end block modification button
+</script>

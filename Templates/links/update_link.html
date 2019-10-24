@@ -1,0 +1,42 @@
+{% load static %}
+<script>
+    function update_link_form(e){
+        var link_sel = $('.Selected-link');
+        let warrant_bool = link_sel.hasClass('Warrant')
+        var up_form = $('#link_update_form');
+        console.log(link_sel)
+        $.ajax({
+            async:false,
+            url: '{% url 'update_link' %}',
+            type: "POST",
+            data: {
+                'csrfmiddlewaretoken': '{{ csrf_token }}',
+                'warrant': warrant_bool,
+                'link_id': link_sel.attr("id"),
+            },
+            success: function(data){
+                console.log("Update link");
+                $('#UpdateLinkModal').modal('hide');
+                $('.Selected-link').each(function(){
+                    $(this).removeClass('Selected-link');
+                });
+                //Recreate link
+                link_sel.remove();
+                var point_array = [data.start_x,data.start_y,data.end_x,data.end_y];
+                var link = createLine(data.id,data.id,point_array,drag_width,drag_height);
+                $("#CAM_items #selectable").append(link);
+                if (warrant_bool){
+                    $('#'+data.id).addClass('Warrant');
+                    $('#'+data.id).append('<div class="rectangle Warrant border border-dark rounded">W</div>')
+                }
+                else{
+                    $('#'+data.id).removeClass('Warrant');
+                    $('#'+data.id).empty()
+                }
+            },
+            error: function(){
+                console.log("Error")
+            }
+        })
+    };
+</script>

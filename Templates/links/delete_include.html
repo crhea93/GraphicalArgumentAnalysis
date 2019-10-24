@@ -1,0 +1,42 @@
+
+
+<div class="card bg-light mb-12">
+    <div class="card-body">
+
+              <div class="container-fluid">
+                  <form id="form_link_delete">
+                  <div id="link_blocks_del">
+                      <div class="form-row">
+                          <div class="form-group col-md-6">
+                              <h5>Starting Block</h5>
+                              <select class="form-control" id="starting_block_del">
+                                {% for block in user.blocks %}
+                                  <option>{{ block }}</option>
+                                {% endfor %}
+                              </select>
+                          </div>
+                          <div class="form-group col-md-6">
+                              <h5>Ending Block</h5>
+                            <select class="form-control" id="ending_block_del">
+                                {% for block in user.blocks %}
+                                  <option>{{ block }}</option>
+                                {% endfor %}
+                              </select>
+                          </div>
+                      </div>
+                  </div>
+                      <div class="form-row">
+                          <div class="form-group col-md-12">
+                             <button  class="btn btn-outline-info float-right" value="" id="link_delete">Delete Link</button>
+                          </div>
+                      </div>
+
+                  </form>
+              </div>
+
+
+    </div>
+</div>
+
+
+

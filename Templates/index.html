@@ -1,0 +1,136 @@
+<!-- templates/signup.html -->
+{% extends 'base.html' %}
+{% load widget_tweaks %}
+{% load static %}
+{% load i18n %}
+{% block title %}Graphical Argument Analysis{% endblock %}
+
+{% block content %}
+
+
+
+
+    <div class="container-fluid mt-2">
+        <div class="card outline-default-color" id="primary_card" style="position:static;height: 650px;min-width: 100%;">
+          <div class="card-header" id="primary_head" style="position:relative;width:100%">
+              <h2 class="text-center">Graphical Argument Analysis</h2>
+              <button class="btn btn-outline-info" id="btn_ZoomIn">Zoom In</button>
+              <button class="btn btn-outline-info" id="btn_ZoomOut">Zoom Out</button>
+              <button class="btn btn-outline-info" id="btn_ZoomReset">Zoom Reset</button>
+              <button class="btn bg-info float-right text-white" id="zoom_lev">Zoom: 1</button>
+          </div>
+            <div class="card-body" id="CAM_items" style="position:relative;z-index: 0">
+                <div id="selectable">
+                </div>
+            </div>
+          <div class="card-footer" id="primary_foot" style="position:relative;width:100%;z-index: 2">
+            <input class="btn btn-outline-info" id="btn-Preview-Image" type="button" value="Preview"/>
+
+            <a class="btn btn-outline-info" id="btn-Convert-Html2Image" href="#" hidden>Download</a>
+              <button class="btn btn-outline-danger float-right" id="reset_cam">Delete</button>
+          </div>
+        </div>
+
+    </div>
+    {% include 'concepts/Initial_Placement.html' %}
+    {% include 'concepts/drag_function.html' %}
+    {% include 'concepts/concept_placement.html' %}
+    {% include 'concepts/delete_concept.html' %}
+    {% include 'links/creation.html' %}
+    {% include 'links/update_link.html' %}
+    {% include 'links/delete_link.html' %}
+    <script>
+        // Variables for shift in position due to scroll/drag //
+        var shift_left_total = 0;
+        var shift_top_total = 0;
+        // DEAL WITH THE FACT THAT WE CAN SCROLL
+        var scroll_left = 0; var scroll_top = 0;
+        $('#primary_card').on("scroll", function (event) {
+            scroll_left = this.scrollLeft;
+            $('#primary_head').css("left",scroll_left);
+            $('#primary_foot').css("left",scroll_left);
+           // $('#CAM_items').css('left',scroll_left);
+            scroll_top = this.scrollTop;
+            $('#primary_head').css("top",scroll_top);
+            $('#primary_foot').css("top",scroll_top);
+            var CAM_elem = $("#CAM_items");
+            if (scroll_left > 0) {
+                CAM_elem.css('width', cam_width_max + scroll_left)
+            }
+            shift_left_total = scroll_left; shift_top_total = scroll_top;
+            });
+        //---------------------VARIABLES------------------------------//
+        var pageX_ = 0; var pageY_ = 0;
+        var concept_ct = 1; var drag_height = 50; var drag_width = -75; var currentZoom = 1.0; var self = {};
+        var cam_width_max = 2*$('#CAM_items').width();
+        // Click vs Double Click Variablies //
+        var timer = 0; var delay = 200; var prevent = false;
+        var click_element;
+        //--------------------DELETE DEFINITION-------------------------//
+        document.addEventListener('keydown',function(event){
+            // DELETE BLOCKS AND LINKS ON BACKSPACE OR DELETE
+            if (event.keyCode === 46 || event.charCode === 46 || event.keyCode === 8 || event.charCode === 8){
+                $('.Selected').each(function(){
+                    if ($(this).hasClass('Open')){
+                        //nothing
+                    }
+                    else{
+                        blk_delete($(this)[0]);
+                        $(this).remove()
+                    }
+                });
+                $('.Selected-link').each(function(){
+                    delete_link($(this));
+                    $(this).remove()
+                })
+            }
+        });// end keydown event listener
+
+
+        $(document)
+          .on("click", "#CAM_items",function(event) {
+              // IF USER CLICKS ON CAM WHITESPACE -- ALL SELECTED ITEMS BECOME UNSELECTED
+              var CAM = this;
+              click_element = 'CAM';
+              //Close any existing blocks by submitting them
+            timer = setTimeout(function(e) {
+              if (!prevent && event.target === CAM) {
+                  $('.Selected').each(function(){
+                      $(this).removeClass('Selected')
+                  });
+                  $('.Selected-link').each(function(){
+                      $(this).removeClass('Selected-link')
+                  });
+              }
+              prevent = false;
+            }, delay);
+          });
+          $(document).on("dblclick", "#CAM_items",function(event) {
+              // AUTOMATICALLY CLOSES ANY OPEN BLOCKS
+              click_element = 'CAM';
+              pageX_ = event.pageX;
+              pageY_ = event.pageY;
+              event.preventDefault();
+              if (event.target === this) {
+                  $('.block.Open').each(function(){
+                    close_block_func(this);
+                  });
+                  clearTimeout(timer);
+                  prevent = true;
+                  let place_ret = block_placement(event, $("#CAM_items"), drag_width-shift_left_total, drag_height-shift_top_total, concept_ct, 1/currentZoom);
+                  concept_ct = place_ret[0];X = place_ret[1]; Y = place_ret[2];
+                  $('.Selected').each(function(){
+                        $(this).removeClass("Selected");
+                    });
+              }
+          });
+        //block_access(event, pageX_, pageY_);
+        //-----------------------------RESET CAM-------------------------//
+    </script>
+
+    <!-- HIDDEN BUTTONS -->
+    <button id="form_cam_block_button" class="btn  btn-primary concept_btn" hidden>Add Concept</button>
+    <button id="form_cam_block_button_mod" class="btn  btn-primary modify_concept_btn" hidden>Mod Concept</button>
+
+{% endblock %}
+
